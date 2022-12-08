@@ -3,14 +3,21 @@ require("./config/database").connect()
 const express = require('express')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcryptjs')
+var cookieParser = require('cookie-parser')
+
+// custom middleware
+const auth = require('./middleware/auth')
 
 //import model - user
 const User = require("./model/user")
+const { model } = require('mongoose')
 
-const { PORT } = process.env
+const { SECRET_KEY } = process.env
 
 const app = express()
 app.use(express.json()) // 
+app.use(express.urlencoded({ extended: true }))
+app.use(cookieParser())
 
 app.get("/", (req, res) => {
     res.send("Hello Auth System")
@@ -46,7 +53,7 @@ app.post("/register", async (req, res) => {
         //create a token and send it to user
         const token = jwt.sign({
             id: user._id, email
-        }, 'shhhhh', {expiresIn: '2h'})
+        }, SECRET_KEY, {expiresIn: '2h'})
         
         user.token = token
         //don't want to send the password
@@ -75,7 +82,7 @@ app.post("/login", async (req, res) => {
         // match the password
         if(user && ( await bcrypt.compare(password, user.password))) {
         // create token and send
-            const token = jwt.sign({id: user._id, email}, 'shhhhh', {expiresIn: '2h'})
+            const token = jwt.sign({id: user._id, email}, SECRET_KEY, {expiresIn: '2h'})
 
             user.password = undefined
             user.token = token
@@ -97,6 +104,18 @@ app.post("/login", async (req, res) => {
     }
 })
 
-app.listen(PORT, () => {
-    console.log(`Server is running at ${PORT}`)
+app.get("/dashboard", auth, (req, res) => {
+    res.send('Welcome to dashboard')
 })
+
+app.get("/profile", auth,  (req, res) => {
+    //access to req.user = id, email
+
+    //based on id query to db and get all info of user - findOne({id})
+
+    //send a json response with all data
+})
+
+
+
+module.exports = app
